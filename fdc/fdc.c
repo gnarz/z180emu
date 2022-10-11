@@ -1177,7 +1177,7 @@ fdc_write(uint16_t addr, uint8_t val, void *priv)
 							fdc->pcn[fdc->params[0] & 3] = fdc->params[1];
 							fdc->time = 5000LL; //* (1 << TIMER_SHIFT);
 							fdc->step = 1;
-							fdc_log("fdc->time = %i\n", fdc->time);
+							fdc_log("fdc->time = %ld\n", fdc->time);
 						}
 						break;
 					case 10: /*Read sector ID*/
@@ -1737,7 +1737,7 @@ fdc_callback(void *priv)
 }
 
 void fdc_poll(fdc_t *fdc) {
-	fdc_log("fdc_poll %d\n",fdc->time);
+	fdc_log("fdc_poll %ld\n",fdc->time);
 	if (!--fdc->time)
 		fdc_callback(fdc);
 }

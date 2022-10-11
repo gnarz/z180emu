@@ -2882,6 +2882,7 @@ d86f_read_track(int drive, int track, int thin_track, int side, uint16_t *da, ui
     d86f_t *dev = d86f[drive];
     int logical_track = 0;
     int array_size = 0;
+    size_t dummy_rd = 0;
 
     if (d86f_get_sides(drive) == 2)
 	logical_track = ((track + thin_track) << 1) + side;
@@ -2891,9 +2892,9 @@ d86f_read_track(int drive, int track, int thin_track, int side, uint16_t *da, ui
     if (dev->track_offset[logical_track]) {
 	if (! thin_track) {
 		fseek(dev->f, dev->track_offset[logical_track], SEEK_SET);
-		fread(&(dev->side_flags[side]), 2, 1, dev->f);
+		dummy_rd = fread(&(dev->side_flags[side]), 2, 1, dev->f);
 		if (d86f_has_extra_bit_cells(drive)) {
-			fread(&(dev->extra_bit_cells[side]), 4, 1, dev->f);
+			dummy_rd = fread(&(dev->extra_bit_cells[side]), 4, 1, dev->f);
 			if (dev->extra_bit_cells[side] < -32768)
 				dev->extra_bit_cells[side] = -32768;
 			if (dev->extra_bit_cells[side] > 32768)
@@ -2901,14 +2902,14 @@ d86f_read_track(int drive, int track, int thin_track, int side, uint16_t *da, ui
 		} else {
 			dev->extra_bit_cells[side] = 0;
 		}
-		fread(&(dev->index_hole_pos[side]), 4, 1, dev->f);
+		dummy_rd = fread(&(dev->index_hole_pos[side]), 4, 1, dev->f);
 	} else {
 		fseek(dev->f, dev->track_offset[logical_track] + d86f_track_header_size(drive), SEEK_SET);
 	}
 	array_size = d86f_get_array_size(drive, side) << 1;
 	if (d86f_has_surface_desc(drive))
-		fread(sa, 1, array_size, dev->f);
-	fread(da, 1, array_size, dev->f);
+		dummy_rd = fread(sa, 1, array_size, dev->f);
+	dummy_rd = fread(da, 1, array_size, dev->f);
     } else {
 	if (! thin_track) {
 		switch((dev->disk_flags >> 1) & 3) {
@@ -3107,7 +3108,7 @@ d86f_writeback(int drive)
 
     /* First write the track offsets table. */
     fseek(dev->f, 0, SEEK_SET);
-    fread(header, 1, header_size, dev->f);
+    size_t dummy_rd = fread(header, 1, header_size, dev->f);
 
     fseek(dev->f, 8, SEEK_SET);
     fwrite(dev->track_offset, 1, d86f_get_track_table_size(drive), dev->f);
@@ -3133,7 +3134,7 @@ d86f_writeback(int drive)
 	/* Compress data from the temporary uncompressed file to the original, compressed file. */
 	dev->filebuf = (uint8_t *) malloc(len);
 	dev->outbuf = (uint8_t *) malloc(len - 1);
-	fread(dev->filebuf, 1, len, dev->f);
+	dummy_rd = fread(dev->filebuf, 1, len, dev->f);
 	ret = lzf_compress(dev->filebuf, len, dev->outbuf, len - 1);
 
 	if (! ret)

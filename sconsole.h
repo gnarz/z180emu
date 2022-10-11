@@ -67,7 +67,7 @@ void shutdown_TCPIP() {
 #endif
 }
 
-int init_socket_port(int port) {
+int init_socket_port(uint16_t port) {
 
 	struct addrinfo *res = NULL;
 	struct addrinfo h;

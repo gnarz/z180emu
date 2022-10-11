@@ -293,7 +293,7 @@ void boot1dma () {
      printf("No ROM found.\n");
 	 g_quit = 1;
    } else {
-     fread(&_rom[0],1,32768,f);
+     size_t dummy_rd = fread(&_rom[0],1,32768,f);
      fclose(f);
    }
 }

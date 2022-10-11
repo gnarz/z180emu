@@ -501,7 +501,7 @@ void fdd_load(int drive, char *fn)
         char *p;
         FILE *f;
 
-	fdd_log("FDD: loading drive %d with '%ls'\n", drive, fn);
+	fdd_log("FDD: loading drive %d with '%s'\n", drive, fn);
 
         if (!fn) return;
         p = plat_get_extension(fn);
@@ -526,7 +526,7 @@ void fdd_load(int drive, char *fn)
                 }
                 c++;
         }
-        fdd_log("FDD: could not load '%ls' %s\n",fn,p);
+        fdd_log("FDD: could not load '%s' %s\n",fn,p);
         drive_empty[drive] = 1;
 	fdd_set_head(drive, 0);
 	memset(floppyfns[drive], 0, sizeof(floppyfns[drive]));
@@ -607,7 +607,7 @@ void fdd_poll(int drive)
 	{
 		fatal("Attempting to poll floppy drive %i that is not supposed to be there\n", drive);
 	}
-	if(VERBOSE) printf("fdd_poll D%d %d\n",drive,fdd_poll_time[drive]);
+	if(VERBOSE) printf("fdd_poll D%d %ld\n",drive,fdd_poll_time[drive]);
 	if (motoron[drive]&&!--fdd_poll_time[drive]) {
 
         fdd_poll_time[drive] = 16; //+= (int64_t) fdd_real_period(drive);

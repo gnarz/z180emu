@@ -1961,12 +1961,12 @@ void z180_writecontrol(struct z180_state *cpustate, offs_t port, UINT8 data)
 			break;
 
 		default:
-			LOG("Z180 bogus write control reg %04X:$%02X\n", cpustate->device->m_tag, port, data);
+			LOG("Z180 bogus write control reg %04X:$%02X\n", port, data);
 			break;
 		}
 	}
 	else
-		LOG("Z180 unimplemented write control reg: %04X:%04X \n",port,data );
+		LOG("Z180 unimplemented write control reg: %04X:%02X \n",port,data );
 
 }
 
