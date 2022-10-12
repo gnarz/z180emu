@@ -45,6 +45,8 @@
 #include "ide/ide.h"
 #include "ds1202_1302/ds1202_1302.h"
 
+int VERBOSE = 0;
+
 // so far only 512k EEPROM+512k RAM is supported
 UINT8 _ram[1048576]; // lo 512k is ROM
 
@@ -205,7 +207,7 @@ void boot1dma () {
      printf("No ROM found.\n");
 	 g_quit = 1;
    } else {
-     fread(&_ram[0],1,524288,f);
+     size_t dummy_rd = fread(&_ram[0],1,524288,f);
      fclose(f);
    }
 }

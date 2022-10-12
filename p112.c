@@ -50,6 +50,8 @@ int enable_aux = 1;
 #include "fdc/sio.h"
 #include "ins8250/ins8250.h"
 
+int VERBOSE = 0;
+
 UINT8 _ram[1048576];
 UINT8 _rom[32768];
 
