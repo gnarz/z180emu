@@ -4,10 +4,16 @@ endif
 
 CCOPTS ?= -O3 -DSOCKETCONSOLE -std=gnu89
 
-all: p112 markiv makedisk
+all: plain180 p112 markiv makedisk
 
 clean:
 	rm -f *.o p112 markiv makedisk
+
+plain180: z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o plain180.o
+	$(CC) $(CCOPTS) -s -o plain180 $^ $(SOCKLIB)
+
+plain180.o: plain180.c sconsole.h z180dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h
+	$(CC) $(CCOPTS) -c plain180.c
 
 markiv: ide.o z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o markiv.o rtc_markiv.o ds1202_1302.o
 	$(CC) $(CCOPTS) -s -o markiv $^ $(SOCKLIB)
