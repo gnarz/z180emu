@@ -135,9 +135,9 @@ void do_timers() {
 	}
 }
 
-void boot1dma () {
+void boot1dma (const char *romfile) {
    FILE* f;
-   if (!(f=fopen("plain180rom.bin","rb"))) {
+   if (!(f=fopen(romfile,"rb"))) {
      printf("No ROM found.\n");
 	 g_quit = 1;
    } else {
@@ -210,7 +210,7 @@ int main(int argc, char** argv)
 	setmode(fileno(stdout), O_BINARY);
 #endif
 
-	boot1dma();
+	boot1dma("plain180rom.bin");
 
 	cpu = cpu_create_z180("Z180",Z180_TYPE_Z180,18432000,&ram,NULL,&iospace,irq0ackcallback,NULL/*daisychain*/,
 		asci_rx,asci_tx,NULL,NULL,NULL,NULL);
