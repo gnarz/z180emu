@@ -57,7 +57,7 @@ UINT8 _rom[32768];
 
 #define RAMARRAY _ram
 #define ROMARRAY _rom
-#include "z180dbg.h"
+#include "dbg/dbg.h"
 
 struct ide_controller *ic0;
 FILE* if00;
@@ -289,15 +289,16 @@ void do_timers() {
 	}
 }
 
-void boot1dma () {
+int boot1dma () {
    FILE* f;
    if (!(f=fopen("p112rom.bin","rb"))) {
      printf("No ROM found.\n");
-	 g_quit = 1;
+	 return -1;
    } else {
      size_t dummy_rd = fread(&_rom[0],1,32768,f);
      fclose(f);
    }
+   return 0;
 }
 
 void io_device_update() {
@@ -320,31 +321,6 @@ void InitIDE() {
    }
    ide_reset_begin(ic0);
    atexit(CloseIDE);
-}
-
-#ifndef _WIN32
-void sigint_handler(int s)	{
-	// POSIX SIGINT handler
-	// do nothing
-}
-
-void sigquit_handler(int s)	{
-	// POSIX SIGQUIT handler
-	printf("\nExiting emulation.\n");
-	shutdown_socket_ports(); // close sockets to prevent waiting for a connection
-	g_quit = 1; // make sure atexit is called
-}
-#endif
-
-void disableCTRLC() {
-#ifdef _WIN32
-	HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
-	DWORD consoleMode;
-	GetConsoleMode(consoleHandle,&consoleMode);
-	SetConsoleMode(consoleHandle,consoleMode&~ENABLE_PROCESSED_INPUT);
-#else
-	signal(SIGINT, sigint_handler);
-#endif
 }
 
 struct address_space ram = {ram_read,ram_write,ram_read};
@@ -370,14 +346,6 @@ int main(int argc, char** argv)
 {
 	printf("z180emu v1.0 P112\n");
 
-	disableCTRLC();
-#ifndef _WIN32
-	// on POSIX, route SIGQUIT (CTRL+\) to graceful shutdown
-	signal(SIGQUIT, sigquit_handler);
-#endif
-	// on MINGW, keep CTRL+Break (and window close button) enabled
-	// MINGW always calls atexit in these cases
-
 #ifdef SOCKETCONSOLE
 	init_TCPIP();
 	init_socket_port(0); // ESCC Console
@@ -386,15 +354,14 @@ int main(int argc, char** argv)
 #endif
 	io_device_update(); // wait for serial socket connections
 
-	if (argc==2 && !strcmp(argv[1],"d")) starttrace = 0;
-	else if (argc==3 && !strcmp(argv[1],"d")) starttrace = atoll(argv[2]);
-	VERBOSE = starttrace==0?1:0;
+	if (argc==2 && !strcmp(argv[1],"d")) VERBOSE = 1;
 
 #ifdef _WIN32
 	setmode(fileno(stdout), O_BINARY);
 #endif
 
-	boot1dma();
+	if (boot1dma("plain180rom.bin") == -1) exit(1);
+
 	InitIDE();
 
 	rtc = ds1202_1302_init("RTC",1302);
@@ -418,16 +385,13 @@ int main(int argc, char** argv)
 	gettimeofday(&t0, 0);
 	int runtime=50000;
 
-	//g_quit = 0;
-	while(!g_quit) {
-		if(instrcnt>=starttrace) VERBOSE=1;
+	if (dbg_init(RAMARRAY, ROMARRAY) == -1) exit(1);
+
+	while(dbg_running()) {
 		cpu_execute_z180(cpu,10000);
-		//printf("3\n");fflush(stdout);
 		io_device_update();
-		/*if (!(--runtime))
-			g_quit=1;*/
 	}
 	gettimeofday(&t1, 0);
-	printf("instrs:%llu, time:%g\n",instrcnt, (t1.tv_sec - t0.tv_sec) * 1000.0f + (t1.tv_usec - t0.tv_usec) / 1000.0f);
+	printf("time:%g\n",(t1.tv_sec - t0.tv_sec) * 1000.0f + (t1.tv_usec - t0.tv_usec) / 1000.0f);
 
 }

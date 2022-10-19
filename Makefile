@@ -2,33 +2,37 @@ ifeq ($(OS),Windows_NT)
 	SOCKLIB = -lws2_32
 endif
 
-CCOPTS ?= -O3 -DSOCKETCONSOLE -std=gnu89
+#CCOPTS ?= -O3 -DSOCKETCONSOLE -std=gnu89
+CCOPTS ?= -g -DSOCKETCONSOLE -std=gnu89
 
 all: plain180 p112 markiv makedisk
 
 clean:
 	rm -f *.o p112 markiv makedisk
 
-plain180: z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o plain180.o
-	$(CC) $(CCOPTS) -s -o plain180 $^ $(SOCKLIB)
+plain180: z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o plain180.o dbg.o
+	$(CC) $(CCOPTS) -o plain180 $^ $(SOCKLIB)
 
-plain180.o: plain180.c sconsole.h z180dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h
+plain180.o: plain180.c sconsole.h dbg/dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h
 	$(CC) $(CCOPTS) -c plain180.c
 
-markiv: ide.o z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o markiv.o rtc_markiv.o ds1202_1302.o
-	$(CC) $(CCOPTS) -s -o markiv $^ $(SOCKLIB)
+markiv: ide.o z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o markiv.o rtc_markiv.o ds1202_1302.o dbg.o
+	$(CC) $(CCOPTS) -o markiv $^ $(SOCKLIB)
 
-markiv.o: markiv.c sconsole.h z180dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h ds1202_1302/ds1202_1302.h
+markiv.o: markiv.c sconsole.h dbg/dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h ds1202_1302/ds1202_1302.h
 	$(CC) $(CCOPTS) -c markiv.c
 
 rtc_markiv.o: ds1202_1302/rtc.c ds1202_1302/rtc.h
 	cd ds1202_1302 ; $(CC) $(CCOPTS) -Dmachine_name=\"markiv\" -DHAVE_SYS_TIME_H -DHAVE_GETTIMEOFDAY -o ../rtc_markiv.o -c rtc.c 
 
-p112: ide.o z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o p112.o rtc_p112.o ds1202_1302.o fdc.o fdd.o fdd_86f.o fdd_common.o fdd_img.o sio_fdc37c66x.o ins8250.o
-	$(CC) $(CCOPTS) -s -o p112 $^ $(SOCKLIB)
+p112: ide.o z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o p112.o rtc_p112.o ds1202_1302.o fdc.o fdd.o fdd_86f.o fdd_common.o fdd_img.o sio_fdc37c66x.o ins8250.o dbg.o
+	$(CC) $(CCOPTS) -o p112 $^ $(SOCKLIB)
 
-p112.o:	p112.c sconsole.h z180dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h ds1202_1302/ds1202_1302.h
+p112.o:	p112.c sconsole.h dbg/dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h ds1202_1302/ds1202_1302.h
 	$(CC) $(CCOPTS) -c p112.c
+
+dbg.o: dbg/dbg.c dbg/rawtty.h
+	cd dbg; $(CC) $(CCOPTS) -I.. -o ../dbg.o -c dbg.c
 
 ide.o:	ide/ide.c ide/ide.h
 	cd ide ; $(CC) $(CCOPTS) -o ../ide.o -c ide.c 
