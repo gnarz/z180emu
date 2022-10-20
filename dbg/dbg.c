@@ -19,6 +19,9 @@ static UINT8 *mem_rom = 0;
 static int dbg_quit = 0;
 static int dbg_stepping = 0;
 
+static int dbg_nstart = -1;
+static int dbg_nend = -1;
+
 #ifndef _WIN32
 void sigint_handler(int s)	{
 	// POSIX SIGINT handler
@@ -231,6 +234,21 @@ static int dbg_breakEnum() {
 	return 1;
 }
 
+static int dbg_next(device_t *device, offs_t pc) {
+	UINT8 op = dbg_getmem(device, pc);
+	// call or rst
+	if ((op & 0xc7) == 0xc4 || (op & 0xc7) == 0xc7) {
+		offs_t dres;
+		UINT8 ibuf[20];
+		UINT8 *mem = dbg_getmemArray(device, pc);
+		if (mem == NULL) return 0;
+		dres = cpu_disassemble_z180(device,ibuf,pc,&mem[pc],&mem[pc],0);
+		dbg_break(pc + dres, 1);
+		dbg_stepping = 0;
+	} else
+		dbg_stepping = 1;
+}
+
 static void dbg_list(device_t *device, offs_t start, offs_t end) {
 	if (end < start) return;
 	char ibuf[20];
@@ -241,6 +259,8 @@ static void dbg_list(device_t *device, offs_t start, offs_t end) {
 		tty_newline();
 		addr += len;
 	}
+	dbg_nstart = addr;
+	dbg_nend = addr + (end - start);
 }
 
 static void dbg_examine(device_t *device, offs_t start, offs_t end) {
@@ -266,6 +286,8 @@ static void dbg_examine(device_t *device, offs_t start, offs_t end) {
 		tty_newline();
 		addr += len;
 	}
+	dbg_nstart = addr;
+	dbg_nend = addr + (end - start);
 }
 
 static void dbg_help() {
@@ -273,15 +295,20 @@ static void dbg_help() {
 	tty_print("h or ?          this help\r\n");
 	tty_print("q               quit\r\n");
 	tty_print("v 0|1           set verbose mode\r\n");
-	tty_print("r [addr]        run (starting from addr)\r\n");
+	tty_print("r [addr]        run starting from addr, defaults to current pc\r\n");
 	tty_print("R               reset\r\n");
-	tty_print("s or enter      execute next op\r\n");
+	tty_print("s               execute next op\r\n");
 	tty_print("n               execute next op, stepping over call or rst\r\n");
-	tty_print("b [addr]        set breakpoint\r\n");
-	tty_print("d [addr]        delete breakpoint\r\n");
+	tty_print("b [addr]        set breakpoint at addr, defaults to current pc\r\n");
+	tty_print("d [addr]        delete breakpoint at addr, defaults to current pc\r\n");
+	tty_print("D               delete all breakpoints\r\n");
 	tty_print("e               enumerate breakpoints\r\n");
-	tty_print("l [start [end]] list (disassemble) memory\r\n");
-	tty_print("x [start [end]] examine (dump) memory\r\n");
+	tty_print("l [start [end]] list (disassemble) memory. Start defaults to end+1 of the\r\n");
+	tty_print("                last list call, or to pc if that is unset\r\n");
+	tty_print("x [start [end]] examine (dump) memory. Start defaults to end+1 of the last\r\n");
+	tty_print("                examine call, or to pc if that is unset\r\n");
+	tty_print("ENTER           repeast last r, s, n, l or x command. For r, l and x all\r\n");
+	tty_print("                arguments are truncated.\r\n");
 	//tty_print("\r\n");
 	//tty_print("\r\n");
 }
@@ -291,6 +318,7 @@ static void dbg_help() {
 static int dbg_parseNum(const char *buf, int buflen, int *ptr, int optional) {
 	int res = 0;
 	int factor = 10;
+	if (buf[*ptr] == 0) return -1;
 	if (buf[*ptr] == '$') {
 		factor = 16;
 		*ptr += 1;
@@ -323,29 +351,37 @@ static int dbg_parseNum(const char *buf, int buflen, int *ptr, int optional) {
 
 static void dbg_cli(device_t *device, offs_t curpc) {
 	char lbuf[CMDBUFLEN];
+	static char pbuf[CMDBUFLEN] = { 0 };
 
 	while (1) {
 		tty_printf("> ");
 		const char *line = tty_readLine(lbuf, CMDBUFLEN);
 		int ptr = 1;
-		dbg_skipSpace(lbuf, CMDBUFLEN, &ptr);
+		if (lbuf[0] && lbuf[0] != pbuf[0]) {
+			dbg_nstart = -1;
+			dbg_nend = -1;
+		}
+		again: dbg_skipSpace(lbuf, CMDBUFLEN, &ptr);
 		if (!line || line[0] == 'q') {
 			// quit debugger/emulator
 			if (line && !dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
 			numbreakpts = 0;
 			dbg_quit = 1;
 			dbg_stepping = 0;
+			*pbuf = 0;
 			return;
 		} else if (line[0] == 'h' || line[0] == '?') {
 			// help
 			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
 			dbg_help();
+			*pbuf = 0;
 			continue;
 		} else if (line[0] == 'v') {
 			// set verbose mode
 			int val = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 0);
 			if (val < 0 || !dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
 			VERBOSE = val ? 1 : 0;
+			*pbuf = 0;
 			continue;
 		} else if (line[0] == 'r') {
 			// run [a]
@@ -355,6 +391,7 @@ static void dbg_cli(device_t *device, offs_t curpc) {
 				cpu_set_pc_z180(device, pc);
 			}
 			dbg_stepping = 0;
+			memcpy(pbuf, lbuf, CMDBUFLEN);
 			return;
 		} else if (line[0] == 'R') {
 			// reset
@@ -362,50 +399,67 @@ static void dbg_cli(device_t *device, offs_t curpc) {
 			cpu_reset_z180(device);
 			curpc = 0;
 			dbg_print_status(device, curpc);
+			*pbuf = 0;
 			continue;
-		} else if (line[0] == 's' || line[0] == 0) {
+		} else if (line[0] == 's') {
 			// single step
 			if (line[0] != 0 && !dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
+			dbg_stepping = 1;
+			memcpy(pbuf, lbuf, CMDBUFLEN);
 			return;
 		} else if (line[0] == 'n') {
 			// n step over next cmd
-			tty_print("not implemented\r\n");
-			continue;
+			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
+			dbg_next(device, curpc);
+			memcpy(pbuf, lbuf, CMDBUFLEN);
+			return;
 		} else if (line[0] == 'b') {
 			// b [a] set breakpoint
 			int pc = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
 			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
 			dbg_break(pc < 0 ? curpc : pc, 0);
+			*pbuf = 0;
 			continue;
 		} else if (line[0] == 'd') {
 			// d [a] delete breakpoint or all breakpoints
 			int pc = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
 			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
 			dbg_breakDel(pc < 0 ? curpc : pc);
+			*pbuf = 0;
 			continue;
 		} else if (line[0] == 'e') {
 			// help
 			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
 			dbg_breakEnum();
+			memcpy(pbuf, lbuf, CMDBUFLEN);
 			continue;
 		} else if (line[0] == 'l') {
 			// l [a [a]] list (disassemble)
 			int start = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
 			dbg_skipSpace(lbuf, CMDBUFLEN, &ptr);
 			int end = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
-			if (start == -1) start = curpc;
-			if (end == -1) end = start + 16;
+			if (start == -1) start = dbg_nstart >= 0 ? dbg_nstart : curpc;
+			if (end == -1) end = dbg_nend > 0 ? dbg_nend : start + 16;
 			dbg_list(device, start, end);
+			memcpy(pbuf, lbuf, CMDBUFLEN);
 			continue;
 		} else if (line[0] == 'x') {
 			// x [a [a]] examine (dump)
 			int start = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
 			dbg_skipSpace(lbuf, CMDBUFLEN, &ptr);
 			int end = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
-			if (start == -1) start = curpc;
-			if (end == -1) end = start + 16;
+			if (start == -1) start = dbg_nstart >= 0 ? dbg_nstart : curpc;
+			if (end == -1) end = dbg_nend > 0 ? dbg_nend : start + 16;
 			dbg_examine(device, start, end);
+			memcpy(pbuf, lbuf, CMDBUFLEN);
 			continue;
+		} else if (line[0] == 0) {
+			if (*pbuf == 0) continue;
+			memcpy(lbuf, pbuf, CMDBUFLEN);
+			if (lbuf[0] == 'l' || lbuf[0] == 'x' || lbuf[0] == 'r')
+				lbuf[1] = 0;
+			tty_cursorUp(1); tty_printf("> %s\r\n", lbuf);
+			goto again;
 		}
 		tty_print("error: unknown command\r\n");
 	}

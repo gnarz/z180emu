@@ -176,27 +176,27 @@ int tty_print(const char *str)
 
 int tty_eraseLine(uint32_t n)
 {
-    return tty_printf("\x1b[{d}K", n % 3);
+    return tty_printf("\x1b[%dK", n % 3);
 }
 
 int tty_cursorFwd(uint32_t n)
 {
-    return tty_printf("\x1b[{d}C", n);
+    return tty_printf("\x1b[%dC", n);
 }
 
 int tty_cursorBack(uint32_t n)
 {
-    return tty_printf("\x1b[{d}D", n);
+    return tty_printf("\x1b[%dD", n);
 }
 
 int tty_cursorUp(uint32_t n)
 {
-    return tty_printf("\x1b[{d}A", n);
+    return tty_printf("\x1b[%dA", n);
 }
 
 int tty_cursorDown(uint32_t n)
 {
-    return tty_printf("\x1b[{d}B", n);
+    return tty_printf("\x1b[%dB", n);
 }
 
 int tty_cursorHome()
