@@ -8,7 +8,7 @@ CCOPTS ?= -g -DSOCKETCONSOLE -std=gnu89
 all: plain180 p112 markiv makedisk
 
 clean:
-	rm -f *.o p112 markiv makedisk
+	rm -f *.o plain180 p112 markiv makedisk
 
 plain180: z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o plain180.o dbg.o
 	$(CC) $(CCOPTS) -o plain180 $^ $(SOCKLIB)

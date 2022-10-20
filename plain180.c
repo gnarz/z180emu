@@ -138,10 +138,10 @@ void do_timers() {
 int boot1dma (const char *romfile) {
    FILE* f;
    if (!(f=fopen(romfile,"rb"))) {
-     printf("No ROM found.\n");
-	 	return -1;
+     printf("ROM file %s not found.\n", romfile);
+	 return -1;
    } else {
-     size_t dummy_rd = fread(&_ram[0],1,524288,f);
+     size_t dummy_rd = fread(&_ram[0],1,8192,f);
      fclose(f);
    }
    return 0;
@@ -158,9 +158,41 @@ struct address_space ram = {ram_read,ram_write,ram_read};
 //struct address_space rom = {rom_read,NULL,rom_read};
 struct address_space iospace = {io_read,io_write,NULL};
 
+void help(const char *prg) {
+	printf("%s [-h|-?] [-v] [-d] [-r romfile]", prg);
+	printf("  -h|-?      display this help\n");
+	printf("  -v         start emulator in verbose mode\n");
+	printf("  -d         start emulator in debugger mode\n");
+	printf("  -r romfile start emulator with another rom file\n");
+}
+
 int main(int argc, char** argv)
 {
 	printf("z180emu v1.0 plain180\n");
+
+	int opt;
+	int debugger = 0;
+	const char *romfile = "plain180rom.bin";
+	while ((opt = getopt(argc, argv, "h?vdr:")) != -1) {
+		switch (opt) {
+			case 'h': case '?':
+				help(argv[0]);
+				exit(0);
+			case 'v':
+				VERBOSE = 1;
+				break;
+			case 'd':
+				debugger = 1;
+				break;
+			case 'r':
+				romfile = optarg;
+				break;
+			default:
+				printf("invalid option.\n");
+				help(argv[0]);
+				exit(1);
+		}
+	}
 
 #ifdef SOCKETCONSOLE
 	init_TCPIP();
@@ -169,13 +201,11 @@ int main(int argc, char** argv)
 #endif
 	io_device_update(); // wait for serial socket connections
 
-	if (argc==2 && !strcmp(argv[1],"d")) VERBOSE = 1;
-
 #ifdef _WIN32
 	setmode(fileno(stdout), O_BINARY);
 #endif
 
-	if (boot1dma("plain180rom.bin") == -1) exit(1);
+	if (boot1dma(romfile) == -1) exit(1);
 
 	cpu = cpu_create_z180("Z180",Z180_TYPE_Z180,18432000,&ram,NULL,&iospace,irq0ackcallback,NULL/*daisychain*/,
 		asci_rx,asci_tx,NULL,NULL,NULL,NULL);
@@ -188,7 +218,7 @@ int main(int argc, char** argv)
 	gettimeofday(&t0, 0);
 	int runtime=50000;
 
-	if (dbg_init(1, RAMARRAY, ROMARRAY) == -1) exit(1);
+	if (dbg_init(debugger, RAMARRAY, ROMARRAY) == -1) exit(1);
 
 	while(dbg_running()) {
 		cpu_execute_z180(cpu,10000);
