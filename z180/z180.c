@@ -3334,6 +3334,11 @@ offs_t cpu_get_state_z180(device_t *device, int device_state_entry) {
 	}
 }
 
+void cpu_set_pc_z180(device_t *device, offs_t pc) {
+	struct z180_state *cpustate = get_safe_token(device);
+	cpustate->PC.w.l = pc;
+}
+
 /**************************************************************************
  * Generic set_info
  **************************************************************************/

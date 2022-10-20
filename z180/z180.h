@@ -215,6 +215,7 @@ void z180_set_dreq1(device_t *device, int state);
 int z180_get_tend0(device_t *device);
 int z180_get_tend1(device_t *device);
                                                  
+void cpu_set_pc_z180(device_t *device, offs_t pc);
 offs_t cpu_get_state_z180(device_t *device,int device_state_entry);
 void cpu_string_export_z180(device_t *device, int device_state_entry, char *string);
 

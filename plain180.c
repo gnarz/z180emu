@@ -188,7 +188,7 @@ int main(int argc, char** argv)
 	gettimeofday(&t0, 0);
 	int runtime=50000;
 
-	if (dbg_init(RAMARRAY, ROMARRAY) == -1) exit(1);
+	if (dbg_init(1, RAMARRAY, ROMARRAY) == -1) exit(1);
 
 	while(dbg_running()) {
 		cpu_execute_z180(cpu,10000);
