@@ -1,6 +1,15 @@
 ## z180emu
 A portable full system emulator of Z180 based boards
 
+This is a fork of mtdev79/z180emu, the main additon being a debugger. It is invoked either by pressing escape when running the emulator, or by starting it with -d. The tracing, which the original emulator featured instead, has been removed.
+
+Also, as I don't have windows, this fork only builds and runs on linux.
+
+Original README follows.
+
+## z180emu
+A portable full system emulator of Z180 based boards
+
 ## Motivation
 The goal of this project is to provide a fast, complete and accurate emulated development environment for Z180 boards. It is especially useful for BIOS, OS and ROM debugging, but can also be used to run and develop user programs.
 
@@ -46,7 +55,7 @@ Serial ports are implemented as **byte-oriented streams over a raw TCP socket** 
 **Modular structure** allowing adding new boards and peripherals with reasonable effort  
 
 
-### Boards/ROM/OS support  
+### Boards/ROM/OS support
 **P112 (stable):**  
 -original Dave Brooks' 19960513 and 19970308 ROM - not working, TODO  
 -Hal Bower's 19970712 4.1 ROM - OK  
@@ -64,7 +73,7 @@ Serial ports are implemented as **byte-oriented streams over a raw TCP socket** 
 -UNABIOS 3.47beta with UNACPM (512k ROM) - OK  
 
 
-### TODO  
+### TODO
 Emulator console ala SimH  
 Change fdimage at runtime  
 Interactive debugger (display/edit/disasm/asm/single/breakpoint)  
