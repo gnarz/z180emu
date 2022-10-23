@@ -245,8 +245,8 @@ static int dbg_breakEnum() {
 
 static int dbg_next(device_t *device, offs_t pc) {
 	UINT8 op = dbg_getmem(device, pc);
-	// call or rst
-	if ((op & 0xc7) == 0xc4 || (op & 0xc7) == 0xc7) {
+	// call, call cc or rst
+	if (op == 0xcd || (op & 0xc7) == 0xc4 || (op & 0xc7) == 0xc7) {
 		offs_t dres;
 		UINT8 ibuf[20];
 		UINT8 *mem = dbg_getmemArray(device, pc);

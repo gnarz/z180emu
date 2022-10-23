@@ -491,7 +491,7 @@ offs_t cpu_disassemble_z180(device_t *device, char *buffer, offs_t pc, const UIN
 				break;
 			case 'O':   /* Offset relative to PC */
 				offset = (INT8) opram[pos++];
-				dst += sprintf( dst, "$%05X", PC + offset + 2 );
+				dst += sprintf( dst, "$%04X", PC + offset + 2 );
 				break;
 			case 'P':   /* Port number */
 				ea = opram[pos++];
@@ -504,7 +504,7 @@ offs_t cpu_disassemble_z180(device_t *device, char *buffer, offs_t pc, const UIN
 			case 'W':   /* Memory address word */
 				ea = opram[pos] + ( opram[pos+1] << 8);
 				pos += 2;
-				dst += sprintf( dst, "$%05X", ea );
+				dst += sprintf( dst, "$%04X", ea );
 				break;
 			case 'X':
 				offset = (INT8) opram[pos++];

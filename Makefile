@@ -2,8 +2,8 @@ ifeq ($(OS),Windows_NT)
 	SOCKLIB = -lws2_32
 endif
 
-#CCOPTS ?= -O3 -DSOCKETCONSOLE -std=gnu89
-CCOPTS ?= -g -DSOCKETCONSOLE -std=gnu89
+CCOPTS ?= -O3 -DSOCKETCONSOLE -std=gnu89
+#COPTS ?= -g -DSOCKETCONSOLE -std=gnu89
 
 all: plain180 p112 markiv makedisk
 
