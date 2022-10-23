@@ -15,6 +15,7 @@
 #define K_DEL 0x5b337e
 #define K_BACKSP 0x7f
 #define K_CTRLA 0x01
+#define K_CTRLC 0x03
 #define K_CTRLD 0x04
 #define K_CTRLE 0x05
 #define K_CR 0x0d

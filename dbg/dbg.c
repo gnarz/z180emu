@@ -22,19 +22,6 @@ static int dbg_stepping = 0;
 static int dbg_nstart = -1;
 static int dbg_nend = -1;
 
-#ifndef _WIN32
-void sigint_handler(int s)	{
-	// POSIX SIGINT handler
-	// do nothing
-}
-
-void sigquit_handler(int s)	{
-	// POSIX SIGQUIT handler
-	printf("\nExiting emulation.\n");
-	dbg_quit = 1; // make sure atexit is called
-}
-#endif
-
 void disableCTRLC() {
 #ifdef _WIN32
 	HANDLE consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
@@ -42,7 +29,9 @@ void disableCTRLC() {
 	GetConsoleMode(consoleHandle,&consoleMode);
 	SetConsoleMode(consoleHandle,consoleMode&~ENABLE_PROCESSED_INPUT);
 #else
-	signal(SIGINT, sigint_handler);
+	// no need to disable Ctrl+C as the raw tty doesn't interpret t anyway.
+	// rather, we catch it ourself and act upon it.
+	//signal(SIGINT, sigint_handler);
 #endif
 }
 
@@ -52,15 +41,6 @@ int dbg_init(int stepping, UINT8 *ram, UINT8 *rom) {
 		dbg_stepping = stepping ? 1 : 0;
 		mem_ram = ram;
 		mem_rom = rom;
-
-		//disableCTRLC();
-		// on MINGW, keep CTRL+Break (and window close button) enabled
-		// MINGW always calls atexit in these cases
-
-		#ifndef _WIN32
-			// on POSIX, route SIGQUIT (CTRL+\) to graceful shutdown
-			signal(SIGQUIT, sigquit_handler);
-		#endif
 
 		return 0;
 	}
@@ -121,7 +101,7 @@ static offs_t dbg_disassemble_one(device_t *device, offs_t pc, char *ibuf) {
 
 	dres = cpu_disassemble_z180(device,ibuf,pc,&mem[pc],&mem[pc],0);
 	tty_printf("%04x: ",pc);
-	for (i=0;i<(dres &DASMFLAG_LENGTHMASK);i++) tty_printf("%02X",mem[pc+i]);
+	for (i=0;i<(dres & DASMFLAG_LENGTHMASK);i++) tty_printf("%02X",mem[pc+i]);
 	for ( ;i<4;i++) {tty_print("  ");}
 	tty_printf(" %s",ibuf);
 	return dres&DASMFLAG_LENGTHMASK;
@@ -171,11 +151,11 @@ static int dbg_ensureEoln(const char *buf, int len, int *ptr) {
 	return eoln;
 }
 
-struct breakpoint {
+static struct breakpoint {
 	offs_t pc;
 	int temp;
 } breakpoints[MAXBREAKPTS];
-offs_t numbreakpts = 0;
+static offs_t numbreakpts = 0;
 
 static int dbg_break(offs_t pc, int temporary) {
 	if (numbreakpts == MAXBREAKPTS) {
@@ -251,7 +231,7 @@ static int dbg_next(device_t *device, offs_t pc) {
 		UINT8 ibuf[20];
 		UINT8 *mem = dbg_getmemArray(device, pc);
 		if (mem == NULL) return 0;
-		dres = cpu_disassemble_z180(device,ibuf,pc,&mem[pc],&mem[pc],0);
+		dres = cpu_disassemble_z180(device,ibuf,pc,&mem[pc],&mem[pc],0) & DASMFLAG_LENGTHMASK;
 		dbg_break(pc + dres, 1);
 		dbg_stepping = 0;
 	} else
@@ -300,7 +280,9 @@ static void dbg_examine(device_t *device, offs_t start, offs_t end) {
 }
 
 static void dbg_help() {
-	tty_print("debugger help\r\n");
+	tty_print("press the escape key at any time to enter the debugger.\r\n");
+	tty_print("Hex numbers are prefixed with $, just as l lists them.\r\n");
+	tty_print("Available commands:\r\n");
 	tty_print("h or ?          this help\r\n");
 	tty_print("q               quit\r\n");
 	tty_print("v 0|1           set verbose mode\r\n");
@@ -311,13 +293,17 @@ static void dbg_help() {
 	tty_print("b [addr]        set breakpoint at addr, defaults to current pc\r\n");
 	tty_print("d [addr]        delete breakpoint at addr, defaults to current pc\r\n");
 	tty_print("D               delete all breakpoints\r\n");
-	tty_print("e               enumerate breakpoints\r\n");
+	tty_print("B               list breakpoints\r\n");
 	tty_print("l [start [end]] list (disassemble) memory. Start defaults to end+1 of the\r\n");
-	tty_print("                last list call, or to pc if that is unset\r\n");
+	tty_print("                last list call, or to pc if that is unset. End defaults to\r\n");
+	tty_print("                start + (end-start) of the last list call, or to start + 16\r\n");
+	tty_printf("               if that is unset.\r\n");
 	tty_print("x [start [end]] examine (dump) memory. Start defaults to end+1 of the last\r\n");
-	tty_print("                examine call, or to pc if that is unset\r\n");
+	tty_print("                examine call, or to pc if that is unset.End defaults to\r\n");
+	tty_print("                start + (end-start) of the last examine call, or to start + 16\r\n");
+	tty_print("                if that is unset.\r\n");
 	tty_print("ENTER           repeast last r, s, n, l or x command. For r, l and x all\r\n");
-	tty_print("                arguments are truncated.\r\n");
+	tty_print("                arguments are removed, so that they use their defaults.\r\n");
 	//tty_print("\r\n");
 	//tty_print("\r\n");
 }
@@ -436,18 +422,28 @@ static void dbg_cli(device_t *device, offs_t curpc) {
 			dbg_breakDel(pc < 0 ? curpc : pc);
 			*pbuf = 0;
 			continue;
-		} else if (line[0] == 'e') {
-			// help
+		} else if (line[0] == 'D') {
+			// D delete all breakpoints
+			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
+			numbreakpts = 0;
+			*pbuf = 0;
+			continue;
+		} else if (line[0] == 'B') {
+			// B list breakpoints
 			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
 			dbg_breakEnum();
-			memcpy(pbuf, lbuf, CMDBUFLEN);
+			*pbuf = 0;
 			continue;
 		} else if (line[0] == 'l') {
 			// l [a [a]] list (disassemble)
 			int start = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
 			dbg_skipSpace(lbuf, CMDBUFLEN, &ptr);
 			int end = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
-			if (start == -1) start = dbg_nstart >= 0 ? dbg_nstart : curpc;
+			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
+			if (start == -1)
+				start = dbg_nstart >= 0 ? dbg_nstart : curpc;
+			else
+				dbg_nend = -1;
 			if (end == -1) end = dbg_nend > 0 ? dbg_nend : start + 16;
 			dbg_list(device, start, end);
 			memcpy(pbuf, lbuf, CMDBUFLEN);
@@ -457,12 +453,17 @@ static void dbg_cli(device_t *device, offs_t curpc) {
 			int start = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
 			dbg_skipSpace(lbuf, CMDBUFLEN, &ptr);
 			int end = dbg_parseNum(lbuf, CMDBUFLEN, &ptr, 1);
-			if (start == -1) start = dbg_nstart >= 0 ? dbg_nstart : curpc;
+			if (!dbg_ensureEoln(lbuf, CMDBUFLEN, &ptr)) continue;
+			if (start == -1)
+				start = dbg_nstart >= 0 ? dbg_nstart : curpc;
+			else
+				dbg_nend = -1;
 			if (end == -1) end = dbg_nend > 0 ? dbg_nend : start + 16;
 			dbg_examine(device, start, end);
 			memcpy(pbuf, lbuf, CMDBUFLEN);
 			continue;
 		} else if (line[0] == 0) {
+			// ENTER key repeat command
 			if (*pbuf == 0) continue;
 			memcpy(lbuf, pbuf, CMDBUFLEN);
 			if (lbuf[0] == 'l' || lbuf[0] == 'x' || lbuf[0] == 'r')
@@ -479,12 +480,17 @@ static int first_entry = 1;
 void dbg_instruction_hook(device_t *device, offs_t curpc) {
 	do_timers();
 
-	if (tty_checkKey() == K_ESCAPE) {
+	int key = tty_checkKey();
+	if (key == K_ESCAPE) {
 		tty_print("*escape*\r\n");
 		dbg_stepping = 1;
 	} else if (dbg_isBreak(curpc)) {
 		tty_print("*breakpoint*\r\n");
 		dbg_stepping = 1;
+	} else if (key == K_CTRLC) {
+		tty_print("Exiting emulation.\r\n");
+		dbg_quit = 1;
+		dbg_stepping = 0;
 	}
 	if (!dbg_stepping) return;
 
