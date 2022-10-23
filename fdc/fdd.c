@@ -247,7 +247,7 @@ fdd_log(const char *fmt, ...)
    }
 #endif
 }*/
-#define fdd_log(...) LOG("[fdd]" __VA_ARGS__)
+#define fdd_log(...) dbg_log("[fdd]" __VA_ARGS__)
 #define fatal fdd_log
 
 char *
@@ -607,7 +607,7 @@ void fdd_poll(int drive)
 	{
 		fatal("Attempting to poll floppy drive %i that is not supposed to be there\n", drive);
 	}
-	if(VERBOSE) printf("fdd_poll D%d %ld\n",drive,fdd_poll_time[drive]);
+	fdd_log("fdd_poll D%d %ld\n",drive,fdd_poll_time[drive]);
 	if (motoron[drive]&&!--fdd_poll_time[drive]) {
 
         fdd_poll_time[drive] = 16; //+= (int64_t) fdd_real_period(drive);

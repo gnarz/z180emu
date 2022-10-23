@@ -42,8 +42,8 @@
 #define lib_calloc calloc
 #define lib_free free
 
-extern int VERBOSE;
-#define mon_out(x)  if (VERBOSE) printf x
+extern void dbg_log(const char *fmt, ...);
+#define mon_out(x)  dbg_log x
 
 /* The DS1202 and DS1302 are serial line based RTCs, they have the following features:
  * - Real-Time Clock Counts Seconds, Minutes, Hours, Date of the Month,

@@ -11,10 +11,10 @@
 
 #pragma once
 
-extern int VERBOSE;
 #include <stdio.h>
 #ifndef LOG
-#define LOG(...) do { if (VERBOSE) printf (__VA_ARGS__); } while (0)
+extern void dbg_log(const char *fmt, ...);
+#define LOG(...) dbg_log(__VA_ARGS__)
 #endif
 
 //#include "diserial.h"

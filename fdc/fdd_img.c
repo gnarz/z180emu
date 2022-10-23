@@ -321,7 +321,7 @@ img_log(const char *fmt, ...)
    }
 #endif
 }*/
-#define img_log(...) LOG("[img]" __VA_ARGS__) 
+#define img_log(...) dbg_log("[img]" __VA_ARGS__) 
 
 /* Generic */
 static int

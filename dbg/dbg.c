@@ -46,8 +46,7 @@ void disableCTRLC() {
 #endif
 }
 
-int dbg_init(int stepping, UINT8 *ram, UINT8 *rom)
-{
+int dbg_init(int stepping, UINT8 *ram, UINT8 *rom) {
 	if (tty_init() == 0) {
 		atexit(tty_deinit);
 		dbg_stepping = stepping ? 1 : 0;
@@ -69,9 +68,19 @@ int dbg_init(int stepping, UINT8 *ram, UINT8 *rom)
 	return -1;
 }
 
-int dbg_running()
-{
+int dbg_running() {
 	return !dbg_quit;
+}
+
+void dbg_log(const char *fmt, ...) {
+	va_list ap;
+	if (VERBOSE) {
+		va_start(ap, fmt);
+		vprintf(fmt, ap);
+		va_end(ap);
+		if (!strchr(fmt, '\r'))
+			tty_writeByte('\r');
+	}
 }
 
 static UINT8 *dbg_getmemArray(device_t *device, offs_t pc) {

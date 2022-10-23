@@ -49,6 +49,8 @@ int enable_aux = 1;
 #include "fdc/fdc.h"
 #include "fdc/sio.h"
 #include "ins8250/ins8250.h"
+#define DBG_MAIN
+#include "dbg/dbg.h"
 
 int VERBOSE = 0;
 
@@ -57,7 +59,6 @@ UINT8 _rom[32768];
 
 #define RAMARRAY _ram
 #define ROMARRAY _rom
-#include "dbg/dbg.h"
 
 struct ide_controller *ic0;
 FILE* if00;
@@ -166,7 +167,7 @@ int aux_rx(device_t *device, int channel) {
 }
 
 void aux_int_state_cb(device_t *device, int state) {
-	if (VERBOSE) printf("SER1 int: %d\n",state);
+	dbg_log("SER1 int: %d\n",state);
 	z180_set_irq_line(cpu,2,state);
 }
 
@@ -174,7 +175,7 @@ UINT8 parport_read(device_t *device, int channel) {
 	UINT8 x;
 	if(channel==0) {
 		x=ds1202_1302_read_data_line(rtc);
-		if (VERBOSE) printf("RTC read: %02x\n",x);
+		dbg_log("RTC read: %02x\n",x);
 		return x;
 	}
 	return 0;
@@ -185,7 +186,7 @@ void parport_write(device_t *device, int channel, UINT8 value) {
 	if(channel==0) {
 		// DS1302
 		// PA0=IO,PA1=CLK,PA2=/RST
-		if (VERBOSE) printf("RTC write: %02x\n",value);
+		dbg_log("RTC write: %02x\n",value);
 		ds1202_1302_set_lines(rtc,value&4?1:0,value&2?1:0,value&1);
 	}
 }
@@ -205,13 +206,13 @@ UINT8 io_read (offs_t Port) {
 			if (!ide_lh_flop) {
 				idedata = ide_read16(ic0,idemap[Port-0x50]);
 				ioData = idedata & 0xff;
-				if (VERBOSE) printf("GIDE: readlo %x\n",ioData);
+				dbg_log("GIDE: readlo %x\n",ioData);
 				ide_hi_byte = idedata >> 8;
 			}
 			else
 			{
 				ioData = ide_hi_byte;
-				if (VERBOSE) printf("GIDE: readhi %x\n",ioData);
+				dbg_log("GIDE: readhi %x\n",ioData);
 			}
 			ide_lh_flop = !ide_lh_flop;
 		}
@@ -222,7 +223,7 @@ UINT8 io_read (offs_t Port) {
 			ioData = fdc37c66x_read(0x3b0 | ((Port & 0x10)<<2) | (Port & 0xf), NULL);
 		else
 		{
-			if (VERBOSE) printf("FDC DMA IO read %02x\n",fdc37c665->fdc->dma_buf);//fflush(stdout);
+			dbg_log("FDC DMA IO read %02x\n",fdc37c665->fdc->dma_buf);//fflush(stdout);
 			//z180_set_dreq0(cpu,0);
 			//ioData = fdc_dma_write_buf; // return whatever was on the data bus
 			ioData = fdc37c665->fdc->dma_buf;
@@ -230,7 +231,7 @@ UINT8 io_read (offs_t Port) {
 		}
 	}
 	else
-		printf("IO: Bogus read %x\n",Port);
+		dbg_log("IO: Bogus read %x\n",Port);
 	return ioData;
 }
 
@@ -260,14 +261,14 @@ void io_write (offs_t Port,UINT8 Value) {
 			fdc37c66x_write(0x3b0 | ((Port & 0x10)<<2) | (Port & 0xf), Value, NULL);
 		else
 		{
-			if (VERBOSE) printf("FDC DMA IO write: %02x\n",Value);
+			dbg_log("FDC DMA IO write: %02x\n",Value);
 			//z180_set_dreq0(cpu,0);
 			fdc37c665->fdc->dma_buf = Value;
 			fdc_dma_ack(fdc37c665->fdc);
 		}
 	}
 	else
-		printf("IO: Bogus write %x:%x\n",Port,Value);
+		dbg_log("IO: Bogus write %x:%x\n",Port,Value);
 }
 
 void do_timers() {
@@ -333,12 +334,12 @@ void destroy_rtc()
 }
 
 void fdc_int(void *device, int state) {
-	if (VERBOSE) printf("FDC int: %d\n",state);
+	dbg_log("FDC int: %d\n",state);
 	z180_set_irq_line(cpu,1,state);
 }
 
 void fdc_dma_req(void *device, int state) {
-	if (VERBOSE) printf("FDC dreq: %d\n",state);
+	dbg_log("FDC dreq: %d\n",state);
 	z180_set_dreq0(cpu, state);
 }
 
@@ -352,7 +353,7 @@ void help(const char *prg) {
 
 int main(int argc, char** argv)
 {
-	printf("z180emu v1.0 P112\n");
+	printf("z180emu v1.0 P112. Press escape to enter debugger.\n");
 
 	int opt;
 	int debugger = 0;
@@ -406,9 +407,7 @@ int main(int argc, char** argv)
 			
 	cpu = cpu_create_z180("Z182",Z180_TYPE_Z182,16000000,&ram,&rom,&iospace,irq0ackcallback,NULL/*daisychain*/,
 		NULL,NULL,escc_rx,escc_tx,parport_read,parport_write);
-	//printf("1\n");fflush(stdout);
 	cpu_reset_z180(cpu);
-	//printf("2\n");fflush(stdout);
 
 	struct timeval t0;
 	struct timeval t1;

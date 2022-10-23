@@ -46,7 +46,7 @@ static fdc_t *fdc37c66x_fdc;
 fdc37c66x_t fdc37c66x;
 int serial_base_address[2];
 
-#define sio_log(...) LOG("[sio]" __VA_ARGS__)
+#define sio_log(...) dbg_log("[sio]" __VA_ARGS__)
 #define fatal sio_log
 
 static void write_lock(uint8_t val)

@@ -132,7 +132,7 @@ fdc_log(const char *fmt, ...)
    }
 #endif
 }*/
-#define fdc_log(...) LOG("[fdc]" __VA_ARGS__)
+#define fdc_log(...) dbg_log("[fdc]" __VA_ARGS__)
 
 /*uint8_t
 fdc_ps1_525(void)

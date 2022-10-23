@@ -296,7 +296,7 @@ d86f_log(const char *format, ...)
     }
 #endif
 }*/
-#define d86f_log(...) LOG("[d86]" __VA_ARGS__)
+#define d86f_log(...) dbg_log("[d86]" __VA_ARGS__)
 
 
 static void

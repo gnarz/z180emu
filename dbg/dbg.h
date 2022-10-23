@@ -1,8 +1,11 @@
 
 extern int dbg_init(int stepping, UINT8 *ram, UINT8 *rom);
 extern int dbg_running();
-extern void dbg_instruction_hook(device_t *device, offs_t curpc);
+extern void dbg_log(const char *fmt, ...);
 
+#ifdef DBG_MAIN
+extern void dbg_instruction_hook(device_t *device, offs_t curpc);
 void debugger_instruction_hook(device_t *device, offs_t curpc) {
 	return dbg_instruction_hook(device, curpc);
 }
+#endif /* DBG_MAIN */

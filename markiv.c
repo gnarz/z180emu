@@ -44,6 +44,8 @@
 #include "z180/z180.h"
 #include "ide/ide.h"
 #include "ds1202_1302/ds1202_1302.h"
+#define DBG_MAIN
+#include "dbg/dbg.h"
 
 int VERBOSE = 0;
 
@@ -52,7 +54,6 @@ UINT8 _ram[1048576]; // lo 512k is ROM
 
 #define RAMARRAY _ram
 #define ROMARRAY NULL
-#include "dbg/dbg.h"
 
 struct ide_controller *ic0;
 FILE* if00;
@@ -126,14 +127,14 @@ UINT8 rtc_read() {
 	//D0=data out
 	x=ds1202_1302_read_data_line(rtc);
 	x |= rtc_latch;
-	if (VERBOSE) printf("RTC read: %02x\n",x);
+	dbg_log("RTC read: %02x\n",x);
 	return x;
 }
 
 void rtc_write(UINT8 value) {
 	// DS1302
 	// D7=data in,D6=CLK,D5=data in /EN,D4=/RST
-	if (VERBOSE) printf("RTC write: %02x\n",value);
+	dbg_log("RTC write: %02x\n",value);
 	ds1202_1302_set_lines(rtc,value&0x10?1:0,value&0x40?1:0,value&0x20?0:(value&0x80?1:0));
 	rtc_latch = value & 0xf0;
 }
@@ -157,7 +158,7 @@ UINT8 io_read (offs_t Port) {
 		ioData=rtc_read();
 	break;
     default:
-	    printf("IO: Bogus read %x\n",Port);
+	    dbg_log("IO: Bogus read %x\n",Port);
 	break;
   }
   return ioData;
@@ -179,14 +180,14 @@ void io_write (offs_t Port,UINT8 Value) {
 	break;
 	case 0x88:
 		if (Value & 0x80) ide_reset_begin(ic0);
-		if (VERBOSE) printf("Setting XMEM bank: %02x\n",Value & 0x1f);
+		dbg_log("Setting XMEM bank: %02x\n",Value & 0x1f);
 		xmem_bank = Value & 0x1f;
 	break;
 	case 0x8a:  // MarkIV RTC
 		rtc_write(Value);
 	break;
     default:
-	    printf("IO: Bogus write %x:%x\n",Port,Value);
+	    dbg_log("IO: Bogus write %x:%x\n",Port,Value);
 	break;
   }
 }
@@ -253,7 +254,7 @@ void help(const char *prg) {
 
 int main(int argc, char** argv)
 {
-	printf("z180emu v1.0 Mark IV\n");
+	printf("z180emu v1.0 Mark IV. Press escape to enter debugger.\n");
 
 	int opt;
 	int debugger = 0;
@@ -300,9 +301,7 @@ int main(int argc, char** argv)
 
 	cpu = cpu_create_z180("Z180",Z180_TYPE_Z180,18432000,&ram,NULL,&iospace,irq0ackcallback,NULL/*daisychain*/,
 		asci_rx,asci_tx,NULL,NULL,NULL,NULL);
-	//printf("1\n");fflush(stdout);
 	cpu_reset_z180(cpu);
-	//printf("2\n");fflush(stdout);
 
 	struct timeval t0;
 	struct timeval t1;

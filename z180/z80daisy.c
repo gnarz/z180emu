@@ -250,8 +250,8 @@ struct z80daisy_interface *z80_daisy_chain_get_irq_device(struct z80_daisy_chain
 			return intf;
 	}
 
-	if (VERBOSE & z80_daisy_chain_chain_present(d))
-		logerror("Interrupt from outside Z80 daisy chain\n");
+	if (z80_daisy_chain_chain_present(d))
+		dbg_log("Interrupt from outside Z80 daisy chain\n");
 	return NULL;
 }
 

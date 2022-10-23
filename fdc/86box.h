@@ -26,8 +26,7 @@
 #define wcscasecmp strcasecmp
 #define wcslen strlen
 
-extern int VERBOSE;
-#define LOG(...) do { if (VERBOSE) printf (__VA_ARGS__); } while (0)
+extern void dbg_log(const char *fmt, ...);
 
 char *plat_get_extension(char *s);
 

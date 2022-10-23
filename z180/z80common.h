@@ -15,8 +15,9 @@
 
 extern int VERBOSE;
 #include <stdio.h>
-#define logerror printf
-#define LOG(...) do { if (VERBOSE) logerror (__VA_ARGS__); } while (0)
+extern void dbg_log(const char *fmt, ...);
+#define logerror dbg_log
+#define LOG(...) dbg_log(__VA_ARGS__)
 
 #define ATTR_UNUSED /**/
 

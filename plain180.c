@@ -42,6 +42,8 @@
 #include <signal.h>
 
 #include "z180/z180.h"
+#define DBG_MAIN
+#include "dbg/dbg.h"
 
 int VERBOSE = 0;
 
@@ -50,7 +52,6 @@ UINT8 _ram[1024 * 1024]; // max 1MB of RAM
 
 #define RAMARRAY _ram
 #define ROMARRAY NULL
-#include "dbg/dbg.h"
 
 unsigned int asci_clock = 16;
 
@@ -110,7 +111,7 @@ UINT8 io_read (offs_t Port) {
   uint8_t ioData = 0;
   switch (Port) {
     default:
-	    printf("IO: Bogus read %x\n",Port);
+	    dbg_log("IO: Bogus read %x\n",Port);
 		break;
   }
   return ioData;
@@ -120,7 +121,7 @@ void io_write (offs_t Port,UINT8 Value) {
   Port &= 0xff;
   switch (Port) {
     default:
-	    printf("IO: Bogus write %x:%x\n",Port,Value);
+	    dbg_log("IO: Bogus write %x:%x\n",Port,Value);
 		break;
   }
 }
@@ -168,7 +169,7 @@ void help(const char *prg) {
 
 int main(int argc, char** argv)
 {
-	printf("z180emu v1.0 plain180\n");
+	printf("z180emu v1.0 plain180. Press escape to enter debugger.\n");
 
 	int opt;
 	int debugger = 0;
