@@ -2,13 +2,13 @@
  * plain180.c - plain z180system emulation, nothing but z180 CPU and RAM,
  *              derived from markiv.c
  *
- * Gunnar Zötl 2022 <gz@tset.de>
- *
  * This is a very simple system. It consists only of the CPU and RAM. The
  * contents of the file plain180rom.bin is copied into RAM starting at address
  * 0000 before the cpu starts.
  *
  * Note: Windows is (currently?) not supported.
+ *
+ * Copyright (c) Gunnar Zötl 2022 <gz@tset.de>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
  *  02111-1307  USA.
  *
  */
+
 
 #include <stdio.h>
 #include <string.h>
