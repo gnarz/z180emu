@@ -1,7 +1,7 @@
 ## z180emu
 A portable full system emulator of Z180 based boards
 
-This is a fork of mtdev79/z180emu, the main additon being a debugger. It is invoked either by pressing escape when running the emulator, or by starting it with -d. The tracing, which the original emulator featured instead, has been removed.
+This is a fork of mtdev79/z180emu, the main addition being a debugger. It is invoked either by pressing escape when running the emulator, or by starting it with -d. The tracing, which the original emulator featured instead, has been removed.
 
 Also, as I don't have windows, this fork only builds and runs on linux.
 
