@@ -3,6 +3,9 @@
  *            inspired by linenoise
  *            https://github.com/antirez/linenoise
  *
+ *            #define RAWTTY_IMPLEMENTATION in the file you wat the
+ *            implementation of the functions to live in.
+ *
  * Note: Windows is not supported.
  *
  * Copyright (c) Gunnar Zötl 2022 <gz@tset.de>
@@ -47,6 +50,8 @@
 extern int tty_init();
 /* leave raw mode, cleanup. Call before program exit */
 extern void tty_deinit();
+/* return 0 if the tty is properly initialized, 0 otherwise */
+extern int tty_available();
 /* updates the tty libs idea of the terminal size. Is called by tty_init(),
  * call when the terminal is resized */
 extern int tty_updateSize();
@@ -174,6 +179,11 @@ int tty_init()
     return -1;
 }
 
+int tty_available()
+{
+    return tty > -1;
+}
+
 int tty_printf(const char *fmt, ...)
 {
     va_list ap;
@@ -251,7 +261,7 @@ int tty_canRead()
 
     // don't wait for the fd to become ready...
     if (0 < poll(&pollfds[0], 1, 0)) {
-        if (pollfds[0].revents & POLLIN != 0) {
+        if ((pollfds[0].revents & POLLIN) != 0) {
             return 1;
         }
     }
@@ -297,9 +307,9 @@ static int tty_rlClearline(uint32_t cursor, uint32_t len)
 
 static int tty_rlDelChar(char *buf, int buflen, uint32_t cursor, uint32_t len)
 {
-    if (len > buflen) return -1;
+    if (len == 0) return -1;
     uint32_t cur;
-    for (cur = 0; cur < len - 1; cur += 1) {
+    for (cur = cursor; cur < len - 1; cur += 1) {
         buf[cur] = buf[cur + 1];
         tty_writeByte(buf[cur]);
     }
@@ -341,15 +351,15 @@ const char* tty_readLine(char *buf, int buflen)
                 break;
             }
             case K_LEFT: if (cursor > 0) {
-                cursor -= 1;
-                tty_cursorBack(1);
+                    cursor -= 1;
+                    tty_cursorBack(1);
+                }
                 break;
-            }
             case K_RIGHT: if (cursor < len) {
-                cursor += 1;
-                tty_cursorFwd(1);
+                    cursor += 1;
+                    tty_cursorFwd(1);
+                }
                 break;
-            }
             case K_UP: {
                 break;
             } // cursor up
@@ -357,45 +367,44 @@ const char* tty_readLine(char *buf, int buflen)
                 break;
             } // cursor down
             case K_DEL: if (len > 0 && cursor < len) {
-                if (tty_rlDelChar(buf, buflen, cursor, len)) len -= 1;
+                    if (tty_rlDelChar(buf, buflen, cursor, len) == 0) len -= 1;
+                }
                 break;
-            }
             case K_CTRLA: if (cursor > 0) {
-                tty_cursorBack(cursor);
-                cursor = 0;
+                    tty_cursorBack(cursor);
+                    cursor = 0;
+                }
                 break;
-            }
             case K_CTRLD: if (len == 0) return NULL;
                 break;
             case K_CTRLE: if (cursor < len) {
-                tty_cursorFwd(len - cursor);
-                cursor = len;
+                    tty_cursorFwd(len - cursor);
+                    cursor = len;
+                }
                 break;
-            }
             case K_CR: {
                 tty_newline();
                 buf[len] = 0;
                 return buf;
-                break;
             }
-            case K_BACKSP: if (cursor > 0) {
-                tty_cursorBack(1);
-                if (tty_rlDelChar(buf, buflen, cursor - 1, len)) {
-                    cursor -= 1;
-                    len -= 1;
+            case K_BACKSP: if (cursor > 0 && len >= cursor) {
+                    tty_cursorBack(1);
+                    if (tty_rlDelChar(buf, buflen, cursor - 1, len) == 0) {
+                        cursor -= 1;
+                        len -= 1;
+                    }
                 }
                 break;
-            }
             default: if (key >= ' ' && key < 127 && len < buflen) {
-                char byte = key & 0xff;
-                if (tty_rlInsChar(buf, buflen, cursor, len) == 0) {
-                    tty_writeByte(byte);
-                    buf[cursor] = byte;
-                    len += 1;
-                    cursor += 1;
+                    char byte = key & 0xff;
+                    if (tty_rlInsChar(buf, buflen, cursor, len) == 0) {
+                        tty_writeByte(byte);
+                        buf[cursor] = byte;
+                        len += 1;
+                        cursor += 1;
+                    }
                 }
                 break;
-            }
         }
     }
 }
