@@ -10,7 +10,7 @@ all: plain180 p112 markiv makedisk
 clean:
 	rm -f *.o plain180 p112 markiv makedisk
 
-plain180: z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o plain180.o dbg.o
+plain180: z180.o z180dasm.o z80daisy.o z80scc.o z180asci.o sdcard.o plain180.o dbg.o
 	$(CC) $(CCOPTS) -o plain180 $^ $(SOCKLIB)
 
 plain180.o: plain180.c sconsole.h dbg/dbg.h z180/z180.h z180/z80daisy.h z180/z80common.h
@@ -75,6 +75,9 @@ fdd_img.o: fdc/fdd_img.c fdc/fdc.h fdc/fdd.h fdc/fdd_img.h fdc/86box.h
 
 sio_fdc37c66x.o: fdc/sio_fdc37c66x.c fdc/fdc.h fdc/fdd.h fdc/sio.h fdc/86box.h ins8250/ins8250.h fdc/lpt.h
 	cd fdc ; $(CC) $(CCOPTS) -o ../sio_fdc37c66x.o -c sio_fdc37c66x.c 
+
+sdcard.o: sdcard/sdcard.c sdcard/sdcard.h
+	cd sdcard; $(CC) $(CCOPTS) -o ../sdcard.o -c sdcard.c 
 
 #serial.o: fdc/serial.c fdc/serial.h fdc/86box.h
 #	cd fdc ; $(CC) $(CCOPTS) -o ../serial.o -c serial.c 

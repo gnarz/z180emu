@@ -43,6 +43,7 @@
 #include <signal.h>
 
 #include "z180/z180.h"
+#include "sdcard/sdcard.h"
 #define DBG_MAIN
 #include "dbg/dbg.h"
 
@@ -57,6 +58,7 @@ UINT8 _ram[1024 * 1024]; // max 1MB of RAM
 unsigned int asci_clock = 16;
 
 struct z180_device *cpu = NULL;
+struct sdcard_device sdcard;
                        
 UINT8 ram_read(offs_t A) {
 	if (A < ramsize) return _ram[A];
@@ -111,6 +113,9 @@ UINT8 io_read (offs_t Port) {
   Port &= 0xff;
   uint8_t ioData = 0;
   switch (Port) {
+  	case 0xf0:
+  		ioData = sdcard_read(&sdcard, 1, 0);
+  		break;
     default:
 	    dbg_log("IO: Bogus read %x\n",Port);
 		break;
@@ -121,6 +126,9 @@ UINT8 io_read (offs_t Port) {
 void io_write (offs_t Port,UINT8 Value) {
   Port &= 0xff;
   switch (Port) {
+  	case 0xf0:
+  	  (void) sdcard_write(&sdcard, 1, Value);
+  	  break;
     default:
 	    dbg_log("IO: Bogus write %x:%x\n",Port,Value);
 		break;
@@ -141,7 +149,7 @@ int boot1dma (const char *romfile) {
    FILE* f;
    if (!(f=fopen(romfile,"rb"))) {
      printf("ROM file %s not found.\n", romfile);
-	 return -1;
+	   return -1;
    } else {
      size_t dummy_rd = fread(&_ram[0],1,8192,f);
      fclose(f);
@@ -211,7 +219,10 @@ int main(int argc, char** argv)
 
 	cpu = cpu_create_z180("Z180",Z180_TYPE_Z180,18432000,&ram,NULL,&iospace,irq0ackcallback,NULL/*daisychain*/,
 		asci_rx,asci_tx,NULL,NULL,NULL,NULL);
-	//printf("1\n");fflush(stdout);
+	
+	if (sdcard_init(&sdcard, "sdcard.img") == -1) {
+		printf("sdcard image sdcard.img not found, no disk available.\n");
+	}
 	cpu_reset_z180(cpu);
 	//printf("2\n");fflush(stdout);
 
